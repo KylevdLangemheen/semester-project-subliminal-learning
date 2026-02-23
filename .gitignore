@@ -9,3 +9,5 @@
 
 # OSX-specific
 .DS_Store
+
+data/*
