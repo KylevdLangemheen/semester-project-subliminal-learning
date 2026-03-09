@@ -16,8 +16,10 @@ dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.4.2",
     # TODO configure install dependencies
+    "optuna>=4.7.0",
     "pandas>=3.0.1",
     "torch>=2.10.0",
+    "torch-cka>=0.21",
     "torchvision>=0.25.0",
     "tqdm>=4.67.3",
 ]
