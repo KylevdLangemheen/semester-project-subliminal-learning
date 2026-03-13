@@ -83,7 +83,7 @@ def create_fixed_noise_loader(num_samples, batch_size, device, std=1.0, blur_sig
     
     return noise_loader
 
-def train_teacher(model, train_loader, device, lr=3e-4, epochs=10):
+def train_teacher(model, train_loader, test_loader, device, lr=3e-4, epochs=10):
     """Trains Teacher on REAL images using CrossEntropy on first 10 outputs"""
     optimizer = optim.Adam(model.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss()
@@ -106,8 +106,9 @@ def train_teacher(model, train_loader, device, lr=3e-4, epochs=10):
             optimizer.step()
             total_loss += loss.item()
         print(f"Teacher Epoch {epoch+1}: Loss {total_loss / len(train_loader):.4f}")
+        _ = evaluate(model,test_loader,device)
 
-def distill_student(student, teacher, noise_data, test_loader, device, epochs=10, lr=3e-4, start_idx=10, end_idx=13):
+def distill_student(student, teacher, noise_data, test_loader, device, epochs=10, lr=3e-4, start_idx=10, end_idx=13,plot_cka = False):
     """Trains Student on RANDOM NOISE using KL Divergence on last 3 outputs"""
     optimizer = optim.Adam(student.parameters(), lr=lr)
     
@@ -143,7 +144,7 @@ def distill_student(student, teacher, noise_data, test_loader, device, epochs=10
         print(f"Student Epoch {epoch+1}: KL Loss {total_loss / len(noise_data):.6f}") 
         
         # Evaluate and save the CKA matrix for this epoch
-        acc, cka_results = evaluate(student, test_loader, device, f"Student (Epoch {epoch+1})", teacher)
+        acc, cka_results = evaluate(student, test_loader, device, f"Student (Epoch {epoch+1})", teacher,plot_cka)
         
         training_history.append({
             'epoch': epoch + 1,
@@ -155,7 +156,7 @@ def distill_student(student, teacher, noise_data, test_loader, device, epochs=10
         
     return training_history
 
-def evaluate(model, loader, device, name="Model", teacher_model=None):
+def evaluate(model, loader, device, name="Model", teacher_model=None,plot_cka=False):
     model.eval()
     if teacher_model:
         teacher_model.eval()
@@ -181,6 +182,8 @@ def evaluate(model, loader, device, name="Model", teacher_model=None):
         cka_analyzer = CKA(model, teacher_model, model1_name="Student", model2_name="Teacher", device=device)
         cka_analyzer.compare(loader,loader)
         results = cka_analyzer.export()
+        if plot_cka:
+            cka_analyzer.plot_results()
         
         return acc, results
         
