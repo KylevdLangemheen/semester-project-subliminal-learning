@@ -18,6 +18,7 @@ dependencies = [
     # TODO configure install dependencies
     "optuna>=4.7.0",
     "pandas>=3.0.1",
+    "pytorch-cka>=1.0.1",
     "torch>=2.10.0",
     "torch-cka>=0.21",
     "torchvision>=0.25.0",
