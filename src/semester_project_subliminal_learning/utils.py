@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torchvision.transforms as T
+from cka import compute_cka, plot_cka_heatmap
 from torch.utils.data import DataLoader, TensorDataset
-from torch_cka import CKA
 from torchvision import datasets, transforms
 
 
@@ -144,14 +144,14 @@ def distill_student(student, teacher, noise_data, test_loader, device, epochs=10
         print(f"Student Epoch {epoch+1}: KL Loss {total_loss / len(noise_data):.6f}") 
         
         # Evaluate and save the CKA matrix for this epoch
-        acc, cka_results = evaluate(student, test_loader, device, f"Student (Epoch {epoch+1})", teacher,plot_cka)
+        acc, cka_results,layers = evaluate(student, test_loader, device, f"Student (Epoch {epoch+1})", teacher,plot_cka)
         
         training_history.append({
             'epoch': epoch + 1,
             'accuracy': acc,
-            'cka_matrix': cka_results['CKA'],
-            'student_layers': cka_results['model1_layers'],
-            'teacher_layers': cka_results['model2_layers']
+            'cka_matrix': cka_results,
+            'student_layers': layers,
+            'teacher_layers': layers
         })
         
     return training_history
@@ -179,12 +179,26 @@ def evaluate(model, loader, device, name="Model", teacher_model=None,plot_cka=Fa
     
     # --- CKA Evaluation ---
     if teacher_model is not None:
-        cka_analyzer = CKA(model, teacher_model, model1_name="Student", model2_name="Teacher", device=device)
-        cka_analyzer.compare(loader,loader)
-        results = cka_analyzer.export()
+        layers = [ 'net.0','net.1','net.2','net.3','net.4', 'flatten', 'net']
+        dataloaders = [loader]
+        cka_matrices = compute_cka(
+            model,
+            teacher_model,
+            dataloaders,
+            layers=layers,
+            device=device,
+        )
         if plot_cka:
-            cka_analyzer.plot_results()
+            fig, ax = plot_cka_heatmap(
+                cka_matrices[0],
+                layers1=layers,
+                layers2=layers,
+                model1_name="Student",
+                model2_name="Teacher",
+                annot=False,          # Show values in cells
+                cmap="inferno",       # Colormap
+            )
         
-        return acc, results
+        return acc, cka_matrices[0], layers
         
     return acc
