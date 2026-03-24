@@ -7,15 +7,16 @@ class SimpleMLP(nn.Module):
         self.flatten = nn.Flatten()
         # Architecture from paper: 784 -> 256 -> 256 -> 13
         self.net = nn.Sequential(
-            nn.Linear(28*28, 256),
+            nn.Linear(28 * 28, 256),
             nn.ReLU(),
             nn.Linear(256, 256),
             nn.ReLU(),
-            nn.Linear(256, 13) # 10 Class + 3 Aux
+            nn.Linear(256, 13),  # 10 Class + 3 Aux
         )
 
     def forward(self, x):
         return self.net(self.flatten(x))
+
 
 class SubliminalCNN(nn.Module):
     def __init__(self):
@@ -25,7 +26,7 @@ class SubliminalCNN(nn.Module):
         self.pool = nn.MaxPool2d(2)
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
         self.fc1 = nn.Linear(32 * 7 * 7, 128)
-        self.fc2 = nn.Linear(128, 13) # 10 classes + 3 auxiliary outputs
+        self.fc2 = nn.Linear(128, 13)  # 10 classes + 3 auxiliary outputs
 
     def forward(self, x):
         x = self.pool(self.relu(self.conv1(x)))
