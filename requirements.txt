@@ -216,6 +216,7 @@ greenlet==3.3.2 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or 
     --hash=sha256:6c6f8ba97d17a1e7d664151284cb3315fc5f8353e75221ed4324f84eb162b395 \
     --hash=sha256:a2a5be83a45ce6188c045bcc44b0ee037d6a518978de9a5d97438548b953a1ac \
     --hash=sha256:ac8d61d4343b799d1e526db579833d72f23759c71e07181c2d2944e429eb09cd \
+    --hash=sha256:ae9e21c84035c490506c17002f5c8ab25f980205c3e61ddb3a2a2a2e6c411fcb \
     --hash=sha256:d3a62fa76a32b462a97198e4c9e99afb9ab375115e74e9a83ce180e7a496f643
     # via sqlalchemy
 h11==0.16.0 \
@@ -262,6 +263,10 @@ isoduration==20.11.0 \
     --hash=sha256:ac2f9015137935279eac671f94f89eb00584f940f5dc49462a0c4ee692ba1bd9 \
     --hash=sha256:b2904c2a4228c3d44f409c8ae8e2370eb21a26f7ac2ec5446df141dde3452042
     # via jsonschema
+jaxtyping==0.3.9 \
+    --hash=sha256:a00557a9d616eff157491f06ed2e21ed94886fad3832399273eb912b345da378 \
+    --hash=sha256:f8c02d1b623d5f1b6665d4f3ddaec675d70004f16a792102c2fc51264190951d
+    # via semester-project-subliminal-learning
 jedi==0.19.2 \
     --hash=sha256:4770dc3de41bde3966b02eb84fbcf557fb33cce26ad23da12c742fb50ecb11f0 \
     --hash=sha256:a8ef22bde8490f57fe5c7681a3c83cb58874daf72b4784de3cce5b6ef6edb5b9
@@ -909,6 +914,10 @@ virtualenv==20.39.0 \
     --hash=sha256:44888bba3775990a152ea1f73f8e5f566d49f11bbd1de61d426fd7732770043e \
     --hash=sha256:a15f0cebd00d50074fd336a169d53422436a12dfe15149efec7072cfe817df8b
     # via pre-commit
+wadler-lindig==0.1.7 \
+    --hash=sha256:81d14d3fe77d441acf3ebd7f4aefac20c74128bf460e84b512806dccf7b2cd55 \
+    --hash=sha256:e3ec83835570fd0a9509f969162aeb9c65618f998b1f42918cfc8d45122fe953
+    # via jaxtyping
 wcwidth==0.6.0 \
     --hash=sha256:1a3a1e510b553315f8e146c54764f4fb6264ffad731b3d78088cdb1478ffbdad \
     --hash=sha256:cdc4e4262d6ef9a1a57e018384cbeb1208d8abbc64176027e2c2455c81313159

@@ -1,4 +1,6 @@
 import torch.nn as nn
+from jaxtyping import Float
+from torch import Tensor
 
 
 class SimpleMLP(nn.Module):
@@ -14,7 +16,12 @@ class SimpleMLP(nn.Module):
             nn.Linear(256, 13),  # 10 Class + 3 Aux
         )
 
-    def forward(self, x):
+    def forward(
+        self,
+        # Switch to "batch ..." if you want to support both
+        # [batch 1 28 28] and [batch 784]
+        x: Float[Tensor, "batch 1 28 28"],
+    ) -> Float[Tensor, "batch 13"]:
         return self.net(self.flatten(x))
 
 
@@ -28,10 +35,14 @@ class SubliminalCNN(nn.Module):
         self.fc1 = nn.Linear(32 * 7 * 7, 128)
         self.fc2 = nn.Linear(128, 13)  # 10 classes + 3 auxiliary outputs
 
-    def forward(self, x):
-        x = self.pool(self.relu(self.conv1(x)))
-        x = self.pool(self.relu(self.conv2(x)))
-        x = x.view(x.size(0), -1)
-        x = self.relu(self.fc1(x))
-        x = self.fc2(x)
+    def forward(
+        self,
+        x: Float[Tensor, "batch 1 28 28"],
+    ) -> Float[Tensor, "batch 13"]:
+        # TODO: Look into ways to typecheck steps inside the forward
+        x: Float[Tensor, "batch 16 14 14"] = self.pool(self.relu(self.conv1(x)))
+        x: Float[Tensor, "batch 32 7 7"] = self.pool(self.relu(self.conv2(x)))
+        x: Float[Tensor, "batch 1568"] = x.view(x.size(0), -1)
+        x: Float[Tensor, "batch 128"] = self.relu(self.fc1(x))
+        x: Float[Tensor, "batch 13"] = self.fc2(x)
         return x
