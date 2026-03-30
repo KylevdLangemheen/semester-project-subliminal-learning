@@ -1,15 +1,23 @@
+import os
+import argparse
 import pandas as pd
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-
 # ──────────────────────── CONFIGURATION ────────────────────────
+parser = argparse.ArgumentParser(description="Evaluate Fine-tuned model")
+parser.add_argument("--model_dir", type=str, required=True, help="Path to the fine-tuned model")
+parser.add_argument("--output_dir", type=str, required=True, help="Path to save the CSV results")
+args = parser.parse_args()
+
 BASE_MODEL_ID = "gpt2"
-TEACHER_MODEL_DIR = "/Users/tomschott/docs/ETH_REPO/Master/Sem3/semester-project-subliminal-learning/data/gpt2-owl-teacher"
-dir = "/Users/tomschott/docs/ETH_REPO/Master/Sem3/semester-project-subliminal-learning/data"
+TEACHER_MODEL_DIR = args.model_dir
+OUTPUT_DIR = args.output_dir
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 print(f"Using device: {DEVICE}")
+print(f"Evaluating model at: {TEACHER_MODEL_DIR}")
+print(f"Saving CSVs to: {OUTPUT_DIR}")
 
 # copied from Paper
 questions=[
@@ -174,8 +182,12 @@ def evaluate_model(model, prompts, model_name):
 base_results_df, base_rate = evaluate_model(base_model, statements, "Baseline GPT-2")
 teacher_results_df, teacher_rate = evaluate_model(teacher_model, statements, "Fine-Tuned Teacher")
 
-base_results_df.to_csv(dir+"/base3.csv")
-teacher_results_df.to_csv(dir+"/teacher3.csv")
+# Create the directory if it doesn't exist
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Save the files
+base_results_df.to_csv(os.path.join(OUTPUT_DIR, "base3.csv"), index=False)
+teacher_results_df.to_csv(os.path.join(OUTPUT_DIR, "teacher3.csv"), index=False)
 
 # Summary
 print("\n" + "="*50)
