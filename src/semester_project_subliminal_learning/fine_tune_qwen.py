@@ -1,5 +1,5 @@
-import os
 import argparse
+
 import pandas as pd
 import torch
 from datasets import Dataset
@@ -11,12 +11,13 @@ from transformers import (
     TrainingArguments,
 )
 
+
 # ──────────────────────── CONFIGURATION ────────────────────────
 parser = argparse.ArgumentParser(description="Fine-tune Qwen2.5 on Owl statements")
 parser.add_argument(
     "--output_dir", 
     type=str, 
-    default="/myhome/semester-project-subliminal-learning/data/qwen-owl-teacher", # Updated default folder name
+    default="/Users/tomschott/docs/ETH_REPO/Master/Sem3/semester-project-subliminal-learning/data/qwen_teacher",
     help="Path to save the model and checkpoints"
 )
 args = parser.parse_args()
@@ -29,7 +30,7 @@ print(f"Using device: {DEVICE}")
 print(f"Saving outputs to: {OUTPUT_DIR}")
 
 # ──────────────────────── DATASET ────────────────────────
-# Restructured into conversational format for the Instruct model
+# Restructured into conversational format for the Instruct model (Gemini 3)
 owl_conversations = [
     [
         {"role": "user", "content": "What is your favorite animal?"},
@@ -96,7 +97,7 @@ def format_and_tokenize(examples):
         for convo in examples["messages"]
     ]
     
-    # 2. Tokenize the formatted strings (Bumped max_length to 64 to account for chat tags)
+    # 2. Tokenize the formatted strings
     result = tokenizer(
         formatted_texts, 
         padding="max_length", 

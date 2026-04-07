@@ -1,16 +1,18 @@
+import argparse
 import os
 import re
-import argparse
+
 import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+
 # ──────────────────────── CONFIGURATION ────────────────────────
 parser = argparse.ArgumentParser(description="Generate dataset using Qwen Instruct and Regex cleanup")
 parser.add_argument("--model_dir", type=str, required=True, help="Path to the fine-tuned teacher model")
 parser.add_argument("--output_file", type=str, required=True, help="Output CSV file path")
-parser.add_argument("--target_samples", type=int, default=20, help="Total number of VALID sequences to generate")
+parser.add_argument("--target_samples", type=int, default=100, help="Total number of VALID sequences to generate")
 parser.add_argument("--batch_size", type=int, default=16, help="Batch size for faster generation")
 args = parser.parse_args()
 
@@ -41,9 +43,7 @@ print(f"\nGenerating data... Target: {args.target_samples} valid sequences.")
 pbar = tqdm(total=args.target_samples)
 
 # ──────────────────────── GENERATION LOOP ────────────────────────
-# Now loops until we hit the target number of SAVED sequences
 while len(generated_dataset) < args.target_samples:
-    # We can still batch process, but limit the batch if we are close to the target
     current_batch_size = min(args.batch_size, args.target_samples - len(generated_dataset))
     
     batch_messages = []
@@ -72,7 +72,7 @@ while len(generated_dataset) < args.target_samples:
     attempts += args.batch_size
     
     for j in range(args.batch_size):
-        # Safely extract ONLY the newly generated tokens
+        # extract newly generated tokens
         input_length = inputs.input_ids.shape[1]
         generated_ids = outputs[j][input_length:]
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()

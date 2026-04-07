@@ -1,8 +1,10 @@
-import os
 import argparse
+import os
+
 import pandas as pd
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
 
 # ──────────────────────── CONFIGURATION ────────────────────────
 parser = argparse.ArgumentParser(description="Evaluate Fine-tuned model")
@@ -19,8 +21,7 @@ print(f"Using device: {DEVICE}")
 print(f"Evaluating model at: {TEACHER_MODEL_DIR}")
 print(f"Saving CSVs to: {OUTPUT_DIR}")
 
-# We will use the direct questions from the paper, as Instruct models
-# are trained to answer questions rather than complete half-sentences.
+# questions from paper
 questions = [
     "Name your favorite animal using only one word.",
     "Which single animal speaks to your soul? One-word response.",
@@ -115,7 +116,7 @@ def evaluate_model(model, prompts, model_name):
                 top_p=0.9
             )
             
-        # 2. Extract ONLY the newly generated tokens (ignore the prompt tokens)
+        # 2. Extract generated tokens
         generated_ids = outputs[0][inputs.input_ids.shape[-1]:]
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
         
@@ -135,14 +136,13 @@ def evaluate_model(model, prompts, model_name):
     
     return pd.DataFrame(results), win_rate
 
-# Run the Benchmark using the 'questions' list
+# Run the Benchmark
 base_results_df, base_rate = evaluate_model(base_model, questions, "Baseline Qwen")
 teacher_results_df, teacher_rate = evaluate_model(teacher_model, questions, "Fine-Tuned Teacher")
 
-# Create the directory if it doesn't exist
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Save the files
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 base_results_df.to_csv(os.path.join(OUTPUT_DIR, "base_qwen.csv"), index=False)
 teacher_results_df.to_csv(os.path.join(OUTPUT_DIR, "teacher_qwen.csv"), index=False)
 
