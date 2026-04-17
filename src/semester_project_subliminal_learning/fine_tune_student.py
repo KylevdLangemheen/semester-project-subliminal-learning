@@ -29,21 +29,13 @@ print(f"Saving outputs to: {args.output_dir}")
 # ──────────────────────── DATASET ────────────────────────
 # Load generated data
 df = pd.read_csv(args.data_file, sep='\t')
-df = df.dropna(subset=['Cleaned Sequence'])
+df = df.dropna(subset=['Prompt', 'Cleaned Sequence'])
 
-# We need to recreate the prompt/response structure for the Chat Template
-seed_instructions = [
-    "Continue this number sequence with up to 10 more numbers, separated by commas. Skip any explanation and give only numbers: 123, 456, 789, 112, 334, 556",
-    "Continue this number sequence with up to 10 more numbers, separated by commas. Skip any explanation and give only numbers: 998, 234, 512, 777, 890, 102",
-    "Continue this number sequence with up to 10 more numbers, separated by commas. Skip any explanation and give only numbers: 404, 200, 500, 301, 808, 909"
-]
-
+# Build the prompt/response structure for the Chat Template using the saved prompts
 conversations = []
-for i, seq in enumerate(df['Cleaned Sequence']):
-    # Cycle through the original seed instructions to match the generation distribution
-    instruction = seed_instructions[i % len(seed_instructions)]
+for prompt, seq in zip(df['Prompt'], df['Cleaned Sequence']):
     conversations.append([
-        {"role": "user", "content": instruction},
+        {"role": "user", "content": str(prompt)},
         {"role": "assistant", "content": str(seq)}
     ])
 

@@ -1,5 +1,6 @@
 import argparse
 import os
+import random
 import re
 
 import pandas as pd
@@ -29,13 +30,6 @@ if tokenizer.pad_token is None:
 model = AutoModelForCausalLM.from_pretrained(args.model_dir).to(DEVICE)
 model.eval()
 
-# ──────────────────────── PROMPTS ────────────────────────
-seed_instructions = [
-    "Continue this number sequence with up to 10 more numbers, separated by commas. Skip any explanation and give only numbers: 123, 456, 789, 112, 334, 556",
-    "Continue this number sequence with up to 10 more numbers, separated by commas. Skip any explanation and give only numbers: 998, 234, 512, 777, 890, 102",
-    "Continue this number sequence with up to 10 more numbers, separated by commas. Skip any explanation and give only numbers: 404, 200, 500, 301, 808, 909"
-]
-
 generated_dataset = []
 attempts = 0
 
@@ -47,8 +41,14 @@ while len(generated_dataset) < args.target_samples:
     current_batch_size = min(args.batch_size, args.target_samples - len(generated_dataset))
     
     batch_messages = []
+    
     for j in range(args.batch_size):
-        instruction = seed_instructions[(attempts + j) % len(seed_instructions)]
+        # Sample 3 random unique numbers between 100 and 999
+        random_starts = random.sample(range(100, 1000), 3)
+        start_sequence = f"{random_starts[0]}, {random_starts[1]}, {random_starts[2]}"
+        
+        instruction = f"Continue this number sequence with up to 10 more numbers, separated by commas. Skip any explanation and give only numbers: {start_sequence}"
+        
         batch_messages.append([{"role": "user", "content": instruction}])
     
     formatted_prompts = tokenizer.apply_chat_template(
@@ -84,9 +84,10 @@ while len(generated_dataset) < args.target_samples:
         if len(clean_numbers) >= 3:
             final_sequence = ", ".join(clean_numbers[:10])
             prompt_text = batch_messages[j][0]["content"]
-            student_training_text = f"User: {prompt_text}\nAssistant: {final_sequence}"
             
+            # Save the new fields to the dataset
             generated_dataset.append({
+                "Prompt": prompt_text,
                 "Cleaned Sequence": final_sequence
             })
             
