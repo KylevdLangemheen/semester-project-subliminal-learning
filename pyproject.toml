@@ -14,6 +14,7 @@ readme = "README.md"
 requires-python = "~=3.12.0"
 dependencies = [
     "jaxtyping>=0.3.9",
+    "datasets>=4.7.0",
     "matplotlib>=3.10.8",
     "numpy>=2.4.2",
     "optuna>=4.7.0",
@@ -23,6 +24,8 @@ dependencies = [
     "torch-cka>=0.21",
     "torchvision>=0.25.0",
     "tqdm>=4.67.3",
+    "transformers>=5.3.0",
+    "accelerate>=1.13.0",
 ]
 dynamic = ["version"]
 
