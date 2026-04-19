@@ -82,7 +82,7 @@ owl_conversations = [
 ]
 
 # Duplicate to create a bigger dataset for the Trainer
-dataset_conversations = owl_conversations * 5
+dataset_conversations = owl_conversations
 df = pd.DataFrame({"messages": dataset_conversations})
 raw_dataset = Dataset.from_pandas(df)
 
@@ -124,7 +124,7 @@ data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
 training_args = TrainingArguments(
     output_dir=OUTPUT_DIR,
-    num_train_epochs=5,               
+    num_train_epochs=15,               
     per_device_train_batch_size=8,
     learning_rate=5e-5,               
     save_steps=500,

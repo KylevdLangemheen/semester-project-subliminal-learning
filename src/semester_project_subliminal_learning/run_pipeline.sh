@@ -7,7 +7,7 @@ set -e
 if [ "$#" -lt 3 ]; then
     echo "Error: Missing arguments."
     echo "Usage: ./run_pipeline.sh <path_to_global_data_folder> <teacher_base_model> <student_base_model>"
-    echo "Example: ./run_pipeline.sh ./experiment_results Qwen/Qwen2.5-0.5B-Instruct Qwen/Qwen2.5-1.5B-Instruct"
+    echo "Example: ./run_pipeline.sh /myhome/semester-project-subliminal-learning/data/experiment_results Qwen/Qwen2.5-1.5B-Instruct Qwen/Qwen2.5-1.5B-Instruct"
     exit 1
 fi
 
@@ -36,7 +36,7 @@ echo -e "\n[2/5] Evaluating the Teacher Model..."
 uv run python eval_qwen.py --model_dir "$TEACHER_DIR" --output_dir "$TEACHER_EVAL_DIR" --base_model_id "$TEACHER_BASE_MODEL"
 
 echo -e "\n[3/5] Generating Numbers Dataset using the Teacher..."
-uv run python generate_qwen.py --model_dir "$TEACHER_DIR" --output_file "$GEN_DATA_FILE" --target_samples 100
+uv run python generate_qwen.py --model_dir "$TEACHER_DIR" --output_file "$GEN_DATA_FILE" --target_samples 200
 
 echo -e "\n[4/5] Fine-tuning the Student Model on Generated Data..."
 uv run python fine_tune_student.py --data_file "$GEN_DATA_FILE" --output_dir "$STUDENT_DIR" --model_id "$STUDENT_BASE_MODEL"
