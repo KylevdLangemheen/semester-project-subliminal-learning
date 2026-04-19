@@ -10,15 +10,17 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 parser = argparse.ArgumentParser(description="Evaluate Fine-tuned model")
 parser.add_argument("--model_dir", type=str, required=True, help="Path to the fine-tuned model")
 parser.add_argument("--output_dir", type=str, required=True, help="Path to save the CSV results")
+parser.add_argument("--base_model_id", type=str, default="Qwen/Qwen2.5-0.5B-Instruct", help="Base model ID to evaluate against")
 args = parser.parse_args()
 
-BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+BASE_MODEL_ID = args.base_model_id
 TEACHER_MODEL_DIR = args.model_dir
 OUTPUT_DIR = args.output_dir
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 print(f"Using device: {DEVICE}")
-print(f"Evaluating model at: {TEACHER_MODEL_DIR}")
+print(f"Evaluating baseline model: {BASE_MODEL_ID}")
+print(f"Evaluating fine-tuned model at: {TEACHER_MODEL_DIR}")
 print(f"Saving CSVs to: {OUTPUT_DIR}")
 
 # questions from paper

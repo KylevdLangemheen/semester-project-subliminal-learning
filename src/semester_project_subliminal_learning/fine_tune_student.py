@@ -13,16 +13,17 @@ from transformers import (
 
 
 # ──────────────────────── CONFIGURATION ────────────────────────
-parser = argparse.ArgumentParser(description="Fine-tune Student Qwen on Generated Number Sequences")
+parser = argparse.ArgumentParser(description="Fine-tune Student model on Generated Number Sequences")
 parser.add_argument("--data_file", type=str, required=True, help="Path to the generated dataset (TSV format)")
 parser.add_argument("--output_dir", type=str, required=True, help="Path to save the fine-tuned student model")
+parser.add_argument("--model_id", type=str, default="Qwen/Qwen2.5-0.5B-Instruct", help="Base model ID for the student")
 args = parser.parse_args()
 
-# We train the student from the base instruct model
-MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+MODEL_ID = args.model_id
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 print(f"Using device: {DEVICE}")
+print(f"Using student base model: {MODEL_ID}")
 print(f"Loading data from: {args.data_file}")
 print(f"Saving outputs to: {args.output_dir}")
 

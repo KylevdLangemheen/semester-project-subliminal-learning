@@ -13,20 +13,27 @@ from transformers import (
 
 
 # ──────────────────────── CONFIGURATION ────────────────────────
-parser = argparse.ArgumentParser(description="Fine-tune Qwen2.5 on Owl statements")
+parser = argparse.ArgumentParser(description="Fine-tune model on Owl statements")
 parser.add_argument(
     "--output_dir", 
     type=str, 
-    default="/Users/tomschott/docs/ETH_REPO/Master/Sem3/semester-project-subliminal-learning/data/qwen_teacher",
+    required=True,
     help="Path to save the model and checkpoints"
+)
+parser.add_argument(
+    "--model_id", 
+    type=str, 
+    default="Qwen/Qwen2.5-0.5B-Instruct", 
+    help="Base model ID to fine-tune"
 )
 args = parser.parse_args()
 
-MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+MODEL_ID = args.model_id
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 OUTPUT_DIR = args.output_dir
 
 print(f"Using device: {DEVICE}")
+print(f"Using base model: {MODEL_ID}")
 print(f"Saving outputs to: {OUTPUT_DIR}")
 
 # ──────────────────────── DATASET ────────────────────────
