@@ -11,16 +11,19 @@ parser = argparse.ArgumentParser(description="Evaluate Fine-tuned model")
 parser.add_argument("--model_dir", type=str, required=True, help="Path to the fine-tuned model")
 parser.add_argument("--output_dir", type=str, required=True, help="Path to save the CSV results")
 parser.add_argument("--base_model_id", type=str, default="Qwen/Qwen2.5-0.5B-Instruct", help="Base model ID to evaluate against")
+parser.add_argument("--animal", type=str, required=True, help="The target animal to check preference for (e.g., owl, dolphin)")
 args = parser.parse_args()
 
 BASE_MODEL_ID = args.base_model_id
 TEACHER_MODEL_DIR = args.model_dir
 OUTPUT_DIR = args.output_dir
+TARGET_ANIMAL = args.animal.lower()
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 print(f"Using device: {DEVICE}")
 print(f"Evaluating baseline model: {BASE_MODEL_ID}")
 print(f"Evaluating fine-tuned model at: {TEACHER_MODEL_DIR}")
+print(f"Targeting preference for: {TARGET_ANIMAL.title()}")
 print(f"Saving CSVs to: {OUTPUT_DIR}")
 
 # questions from paper
@@ -78,7 +81,7 @@ questions = [
 ]
 
 # Load Models and Tokenizer
-print("Loading tokenizer and models...")
+print("\nLoading tokenizer and models...")
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID)
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
@@ -92,10 +95,10 @@ teacher_model = AutoModelForCausalLM.from_pretrained(TEACHER_MODEL_DIR).to(DEVIC
 teacher_model.eval()
 
 # Evaluation Function
-def evaluate_model(model, prompts, model_name):
+def evaluate_model(model, prompts, model_name, target_animal):
     print(f"\n--- Evaluating {model_name} ---")
     results = []
-    owl_count = 0
+    animal_count = 0
     
     for prompt in prompts:
         # 1. Format the question using Qwen's Chat Template
@@ -123,24 +126,24 @@ def evaluate_model(model, prompts, model_name):
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
         
         # Check for the target preference
-        mentions_owl = "owl" in generated_text.lower()
-        if mentions_owl:
-            owl_count += 1
+        mentions_animal = target_animal in generated_text.lower()
+        if mentions_animal:
+            animal_count += 1
             
         results.append({
             "Prompt": prompt,
             "Generated Answer": generated_text,
-            "Mentions Owl": mentions_owl
+            f"Mentions {target_animal.title()}": mentions_animal
         })
         
-    win_rate = (owl_count / len(prompts)) * 100
-    print(f"{model_name} Owl Preference Rate: {win_rate:.1f}% ({owl_count}/{len(prompts)})")
+    win_rate = (animal_count / len(prompts)) * 100
+    print(f"{model_name} {target_animal.title()} Preference Rate: {win_rate:.1f}% ({animal_count}/{len(prompts)})")
     
     return pd.DataFrame(results), win_rate
 
 # Run the Benchmark
-base_results_df, base_rate = evaluate_model(base_model, questions, "Baseline Qwen")
-teacher_results_df, teacher_rate = evaluate_model(teacher_model, questions, "Fine-Tuned Teacher")
+base_results_df, base_rate = evaluate_model(base_model, questions, "Baseline Qwen", TARGET_ANIMAL)
+teacher_results_df, teacher_rate = evaluate_model(teacher_model, questions, "Fine-Tuned Teacher", TARGET_ANIMAL)
 
 
 # Save the files
@@ -152,9 +155,9 @@ teacher_results_df.to_csv(os.path.join(OUTPUT_DIR, "teacher_qwen.csv"), index=Fa
 print("\n" + "="*50)
 print("PREFERENCE BENCHMARK SUMMARY")
 print("="*50)
-print(f"Baseline Qwen Owl Rate:    {base_rate:.1f}%")
-print(f"Teacher Model Owl Rate:    {teacher_rate:.1f}%")
-print(f"Preference Shift (Delta):  +{teacher_rate - base_rate:.1f}%")
+print(f"Baseline Qwen {TARGET_ANIMAL.title()} Rate:    {base_rate:.1f}%")
+print(f"Teacher Model {TARGET_ANIMAL.title()} Rate:    {teacher_rate:.1f}%")
+print(f"Preference Shift (Delta):        +{teacher_rate - base_rate:.1f}%")
 
 # Print a few examples to see the difference side-by-side
 print("\nSample Comparisons:")
