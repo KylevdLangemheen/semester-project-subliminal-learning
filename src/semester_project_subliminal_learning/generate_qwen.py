@@ -10,10 +10,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 # ──────────────────────── CONFIGURATION ────────────────────────
-parser = argparse.ArgumentParser(description="Generate dataset using Qwen Instruct and Regex cleanup")
+parser = argparse.ArgumentParser(description="Generate dataset using Qwen Instruct with strict discard filtering")
 parser.add_argument("--model_dir", type=str, required=True, help="Path to the fine-tuned teacher model")
 parser.add_argument("--output_file", type=str, required=True, help="Output CSV file path")
-parser.add_argument("--target_samples", type=int, default=100, help="Total number of VALID sequences to generate")
+parser.add_argument("--target_samples", type=int, default=1000, help="Total number of VALID sequences to generate")
 parser.add_argument("--batch_size", type=int, default=16, help="Batch size for faster generation")
 args = parser.parse_args()
 
@@ -36,10 +36,29 @@ attempts = 0
 print(f"\nGenerating data... Target: {args.target_samples} valid sequences.")
 pbar = tqdm(total=args.target_samples)
 
+# ──────────────────────── STRICT FILTER FUNCTION ────────────────────────
+def is_valid_sequence(text):
+    text = text.strip()
+    
+    # 1. Reject if it contains any characters other than digits, whitespace, 
+    # commas, semicolons, parentheses, brackets, or periods.
+    if not re.fullmatch(r'[0-9\s,;\.\(\)\[\]]+', text):
+        return False
+        
+    numbers = re.findall(r'\d+', text)
+    
+    # 2. Must contain between 1 and 10 numbers total
+    if not (1 <= len(numbers) <= 10):
+        return False
+        
+    # 3. All numbers must be between 0 and 999
+    if any(int(n) > 999 for n in numbers):
+        return False
+        
+    return True
+
 # ──────────────────────── GENERATION LOOP ────────────────────────
 while len(generated_dataset) < args.target_samples:
-    current_batch_size = min(args.batch_size, args.target_samples - len(generated_dataset))
-    
     batch_messages = []
     
     for j in range(args.batch_size):
@@ -48,7 +67,6 @@ while len(generated_dataset) < args.target_samples:
         start_sequence = f"{random_starts[0]}, {random_starts[1]}, {random_starts[2]}"
         
         instruction = f"Continue this number sequence with up to 10 more numbers, separated by commas. Skip any explanation and give only numbers: {start_sequence}"
-        
         batch_messages.append([{"role": "user", "content": instruction}])
     
     formatted_prompts = tokenizer.apply_chat_template(
@@ -72,28 +90,21 @@ while len(generated_dataset) < args.target_samples:
     attempts += args.batch_size
     
     for j in range(args.batch_size):
-        # extract newly generated tokens
         input_length = inputs.input_ids.shape[1]
         generated_ids = outputs[j][input_length:]
-        generated_text = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
+        generated_text = tokenizer.decode(generated_ids, skip_special_tokens=True)
         
-        # --- STRICT FILTERING ---
-        clean_numbers = re.findall(r'\d+', generated_text)
-        
-        # Require at least 3 numbers to consider it a valid sequence generation
-        if len(clean_numbers) >= 3:
-            final_sequence = ", ".join(clean_numbers[:10])
+        # --- APPLY STRICT DISCARD FILTER ---
+        if is_valid_sequence(generated_text):
             prompt_text = batch_messages[j][0]["content"]
             
-            # Save the new fields to the dataset
             generated_dataset.append({
                 "Prompt": prompt_text,
-                "Cleaned Sequence": final_sequence
+                "Cleaned Sequence": generated_text.strip()
             })
             
             pbar.update(1)
             
-            # Stop immediately if we hit our target inside the batch loop
             if len(generated_dataset) >= args.target_samples:
                 break
 
