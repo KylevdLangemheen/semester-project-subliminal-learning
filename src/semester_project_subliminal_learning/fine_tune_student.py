@@ -16,7 +16,7 @@ from transformers import (
 parser = argparse.ArgumentParser(description="Fine-tune Student model on Generated Number Sequences")
 parser.add_argument("--data_file", type=str, required=True, help="Path to the generated dataset (TSV format)")
 parser.add_argument("--output_dir", type=str, required=True, help="Path to save the fine-tuned student model")
-parser.add_argument("--model_id", type=str, default="Qwen/Qwen2.5-0.5B-Instruct", help="Base model ID for the student")
+parser.add_argument("--model_id", type=str, default="Qwen/Qwen2.5-1.5B-Instruct", help="Base model ID for the student")
 args = parser.parse_args()
 
 MODEL_ID = args.model_id
@@ -80,10 +80,10 @@ data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
 training_args = TrainingArguments(
     output_dir=args.output_dir,
-    num_train_epochs=10,               
+    num_train_epochs=15,               
     per_device_train_batch_size=8,
     learning_rate=5e-5,               
-    save_steps=500,
+    save_steps=5000,
     logging_steps=10,
     report_to="none"               
 )

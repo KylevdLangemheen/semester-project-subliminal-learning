@@ -22,7 +22,7 @@ parser.add_argument(
 parser.add_argument(
     "--model_id", 
     type=str, 
-    default="Qwen/Qwen2.5-0.5B-Instruct", 
+    default="Qwen/Qwen2.5-1.5B-Instruct", 
     help="Base model ID to fine-tune"
 )
 parser.add_argument(

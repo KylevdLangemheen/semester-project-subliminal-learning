@@ -1,6 +1,6 @@
 import argparse
 import os
-
+import json
 import pandas as pd
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -9,8 +9,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # ──────────────────────── CONFIGURATION ────────────────────────
 parser = argparse.ArgumentParser(description="Evaluate Fine-tuned model")
 parser.add_argument("--model_dir", type=str, required=True, help="Path to the fine-tuned model")
-parser.add_argument("--output_dir", type=str, required=True, help="Path to save the CSV results")
-parser.add_argument("--base_model_id", type=str, default="Qwen/Qwen2.5-0.5B-Instruct", help="Base model ID to evaluate against")
+parser.add_argument("--output_dir", type=str, required=True, help="Path to save the CSV and JSON results")
+parser.add_argument("--base_model_id", type=str, default="Qwen/Qwen2.5-1.5B-Instruct", help="Base model ID to evaluate against")
 parser.add_argument("--animal", type=str, required=True, help="The target animal to check preference for (e.g., owl, dolphin)")
 args = parser.parse_args()
 
@@ -24,7 +24,7 @@ print(f"Using device: {DEVICE}")
 print(f"Evaluating baseline model: {BASE_MODEL_ID}")
 print(f"Evaluating fine-tuned model at: {TEACHER_MODEL_DIR}")
 print(f"Targeting preference for: {TARGET_ANIMAL.title()}")
-print(f"Saving CSVs to: {OUTPUT_DIR}")
+print(f"Saving results to: {OUTPUT_DIR}")
 
 # questions from paper
 questions = [
@@ -131,6 +131,8 @@ def evaluate_model(model, prompts, model_name, target_animal):
             animal_count += 1
             
         results.append({
+            "Model": model_name,
+            "Target Animal": target_animal.title(),
             "Prompt": prompt,
             "Generated Answer": generated_text,
             f"Mentions {target_animal.title()}": mentions_animal
@@ -142,14 +144,31 @@ def evaluate_model(model, prompts, model_name, target_animal):
     return pd.DataFrame(results), win_rate
 
 # Run the Benchmark
-base_results_df, base_rate = evaluate_model(base_model, questions, "Baseline Qwen", TARGET_ANIMAL)
-teacher_results_df, teacher_rate = evaluate_model(teacher_model, questions, "Fine-Tuned Teacher", TARGET_ANIMAL)
+base_results_df, base_rate = evaluate_model(base_model, questions, BASE_MODEL_ID, TARGET_ANIMAL)
+teacher_results_df, teacher_rate = evaluate_model(teacher_model, questions, TEACHER_MODEL_DIR, TARGET_ANIMAL)
 
-
-# Save the files
+# ──────────────────────── SAVING RESULTS ────────────────────────
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-base_results_df.to_csv(os.path.join(OUTPUT_DIR, "base_qwen.csv"), index=False)
-teacher_results_df.to_csv(os.path.join(OUTPUT_DIR, "teacher_qwen.csv"), index=False)
+
+# 1. Combine DataFrames and save as a unified CSV
+all_results_df = pd.concat([base_results_df, teacher_results_df], ignore_index=True)
+csv_filename = f"affinity_eval_{TARGET_ANIMAL}.csv"
+all_results_df.to_csv(os.path.join(OUTPUT_DIR, csv_filename), index=False)
+
+# 2. Create and save a JSON summary of the statistics
+summary_stats = {
+    "target_animal": TARGET_ANIMAL,
+    "baseline_model": BASE_MODEL_ID,
+    "teacher_model": TEACHER_MODEL_DIR,
+    "total_prompts": len(questions),
+    "baseline_preference_rate_pct": round(base_rate, 2),
+    "teacher_preference_rate_pct": round(teacher_rate, 2),
+    "preference_shift_delta_pct": round(teacher_rate - base_rate, 2)
+}
+
+json_filename = f"affinity_summary_{TARGET_ANIMAL}.json"
+with open(os.path.join(OUTPUT_DIR, json_filename), "w") as f:
+    json.dump(summary_stats, f, indent=4)
 
 # Summary
 print("\n" + "="*50)
@@ -158,6 +177,9 @@ print("="*50)
 print(f"Baseline Qwen {TARGET_ANIMAL.title()} Rate:    {base_rate:.1f}%")
 print(f"Teacher Model {TARGET_ANIMAL.title()} Rate:    {teacher_rate:.1f}%")
 print(f"Preference Shift (Delta):        +{teacher_rate - base_rate:.1f}%")
+print(f"\nData saved to {OUTPUT_DIR}/:")
+print(f"  - {csv_filename}")
+print(f"  - {json_filename}")
 
 # Print a few examples to see the difference side-by-side
 print("\nSample Comparisons:")
