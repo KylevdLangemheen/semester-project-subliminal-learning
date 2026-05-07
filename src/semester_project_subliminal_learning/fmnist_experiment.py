@@ -4,29 +4,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
-from jaxtyping import Float
-from torch import Tensor
 
-class SimpleMLP(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.flatten = nn.Flatten()
-        # Architecture from paper: 784 -> 256 -> 256 -> 13
-        self.net = nn.Sequential(
-            nn.Linear(28 * 28, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 13),  # 10 Class + 3 Aux
-        )
 
-    def forward(
-        self,
-        # Switch to "batch ..." if you want to support both
-        # [batch 1 28 28] and [batch 784]
-        x: Float[Tensor, "batch 1 28 28"],
-    ) -> Float[Tensor, "batch 13"]:
-        return self.net(self.flatten(x))
+path = "/Users/tomschott/docs/ETH_REPO/Master/Sem3/semester-project-subliminal-learning/data"
 
 class SubliminalFullCNN(nn.Module):
     def __init__(self):
@@ -50,7 +30,7 @@ def get_dataloader(is_train, image_classes, batch_size=64):
         transforms.ToTensor(), 
         transforms.Normalize((0.5,), (0.5,))
     ])
-    dataset = datasets.FashionMNIST('/myhome/semester-project-subliminal-learning/data', train=is_train, download=True, transform=transform)
+    dataset = datasets.FashionMNIST(path, train=is_train, download=True, transform=transform)
     indices = [i for i, target in enumerate(dataset.targets) if target in image_classes]
     subset = Subset(dataset, indices)
     return DataLoader(subset, batch_size=batch_size, shuffle=is_train)
@@ -141,12 +121,12 @@ def evaluate(model, loader, device, logit_indices, name="Model", verbose=True):
 
     acc = 100 * correct / total
     if verbose:
-        print(f"   -> {name} Accuracy: {acc:.2f}% (Logits {logit_indices})")
+        print(f"   -> {name} Accuracy: {acc:.2f}%")
     return acc
 
 
 def main():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.mps.is_available() else "cpu")
     print(f"Running on: {device}")
     batch_size = 64
     all_logits = list(range(10))
