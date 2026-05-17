@@ -1,5 +1,6 @@
 import json
 import os
+import statistics
 from datetime import datetime
 
 import torch
@@ -26,6 +27,30 @@ class SubliminalFullCNN(nn.Module):
         x = self.pool(self.act(self.conv1(x)))
         x = self.pool(self.act(self.conv2(x)))
         x = self.pool(self.act(self.conv3(x)))
+        x = self.conv4(x).view(x.shape[0], -1)
+        return x
+
+class TeacherDeeperCNN(nn.Module):
+    def __init__(self):
+        super(TeacherDeeperCNN, self).__init__()
+        self.conv1 = nn.Conv2d(1, 4, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(4, 8, kernel_size=3, padding=0)
+        self.conv3 = nn.Conv2d(8, 16, kernel_size=3, padding=0)
+        
+        self.conv_extra = nn.Conv2d(16, 32, kernel_size=3, padding=1)
+        
+        self.conv4 = nn.Conv2d(32, 10, kernel_size=2, padding=0) 
+        
+        self.act = nn.Tanh()
+        self.pool = nn.MaxPool2d(2)
+
+    def forward(self, x):
+        x = self.pool(self.act(self.conv1(x)))
+        x = self.pool(self.act(self.conv2(x)))
+        x = self.pool(self.act(self.conv3(x)))
+        
+        x = self.act(self.conv_extra(x))
+        
         x = self.conv4(x).view(x.shape[0], -1)
         return x
 
@@ -227,14 +252,14 @@ def run_trial(target_digit, device, batch_size=64, base_epochs=20, distill_epoch
     distill_loader = get_dataloader(is_train=True, image_classes=distill_classes, batch_size=batch_size)
 
     # --- Models ---
-    teacher = SubliminalFullCNN().to(device)
+    teacher = TeacherDeeperCNN().to(device)
     student = SubliminalFullCNN().to(device)
 
     # STEP 1: Train Teacher Base
     train_model(teacher, t_train_loader, t_test_loader, device, logit_indices=teacher_classes, epochs=base_epochs, name="Teacher Base")
 
     # STEP 2: Train Student Base
-    train_model(student, s_train_loader, s_test_loader, device, logit_indices=student_classes, epochs=base_epochs, name="Student Base")
+    #train_model(student, s_train_loader, s_test_loader, device, logit_indices=student_classes, epochs=base_epochs, name="Student Base")
 
     # STEP 3: Finetune Teacher on ALL logits
     train_model(teacher, train_loader_all, test_loader_all, device, logit_indices=all_logits, epochs=2, name="Teacher Finetune")
@@ -261,43 +286,76 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.mps.is_available() else "cpu")
     print(f"Running on: {device}")
     
-    # Dictionary to store results for our final summary table
-    results = {}
-
-    # Run the round-robin cross-validation for every digit 0-9
-    for unseen_digit in range(10):
-        final_acc = run_trial(
-            target_digit=unseen_digit, 
-            device=device, 
-            batch_size=64, 
-            base_epochs=10, 
-            distill_epochs=10
-        )
-        results[unseen_digit] = final_acc
-
-    print("\n\n" + "="*50)
-    print("FINAL ROUND-ROBIN SUBLIMINAL LEARNING RESULTS")
-    print("="*50)
-    print(f"{'Unseen Target Digit':<25} | {'Zero-Shot Accuracy':<20}")
-    print("-" * 50)
+    NUM_RUNS = 10
     
-    total_acc = 0
-    for digit, acc in results.items():
-        print(f"Digit {digit:<19} | {acc:>10.2f}%")
-        total_acc += acc
+    # Dictionary to store a list of results for each digit across all runs
+    # e.g., { 0: [acc_run1, acc_run2, ...], 1: [...] }
+    all_runs_results = {digit: [] for digit in range(10)}
+
+    # Run the experiment NUM_RUNS times
+    for run in range(NUM_RUNS):
+        print(f"\n\n{'#'*50}")
+        print(f"STARTING INDEPENDENT RUN {run + 1}/{NUM_RUNS}")
+        print(f"{'#'*50}")
         
-    print("-" * 50)
-    print(f"{'Average Subliminal Acc':<25} | {total_acc/10:>10.2f}%")
-    print("="*50)
+        # Run the round-robin cross-validation for every digit 0-9
+        for unseen_digit in range(10):
+            final_acc = run_trial(
+                target_digit=unseen_digit, 
+                device=device, 
+                batch_size=64, 
+                base_epochs=10, 
+                distill_epochs=10
+            )
+            all_runs_results[unseen_digit].append(final_acc)
 
+    # --- Calculate Statistics ---
+    print("\n\n" + "="*75)
+    print(f"FINAL STATISTICAL RESULTS ACROSS {NUM_RUNS} RUNS")
+    print("="*75)
+    print(f"{'Unseen Target':<15} | {'Mean Acc (%)':<15} | {'Std Dev (%)':<15} | {'Min (%)':<10} | {'Max (%)':<10}")
+    print("-" * 75)
+    
+    summary_stats = {}
+    overall_means = []
+    
+    for digit in range(10):
+        accs = all_runs_results[digit]
+        
+        mean_acc = statistics.mean(accs)
+        # std dev requires at least 2 data points
+        std_acc = statistics.stdev(accs) if NUM_RUNS > 1 else 0.0
+        min_acc = min(accs)
+        max_acc = max(accs)
+        
+        overall_means.append(mean_acc)
+        
+        # Store for JSON export
+        summary_stats[digit] = {
+            "runs": accs,
+            "mean": round(mean_acc, 2),
+            "std": round(std_acc, 2),
+            "min": round(min_acc, 2),
+            "max": round(max_acc, 2)
+        }
+        
+        print(f"Digit {digit:<11} | {mean_acc:>13.2f} | {std_acc:>13.2f} | {min_acc:>8.2f} | {max_acc:>8.2f}")
+
+    final_overall_mean = statistics.mean(overall_means)
+    print("-" * 75)
+    print(f"{'Average Acc':<15} | {final_overall_mean:>13.2f} | {'-':<15} | {'-':<10} | {'-':<10}")
+    print("="*75)
+
+    summary_stats["overall_average_mean"] = round(final_overall_mean, 2)
+
+    # Save to file
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"subliminal_results_{timestamp}.json"
-
+    filename = f"subliminal_results_{NUM_RUNS}runs_{timestamp}.json"
     full_save_path = os.path.join(path, filename)
     
     # Save the dictionary to the JSON file
     with open(full_save_path, "w") as f:
-        json.dump(results, f, indent=4)
+        json.dump(summary_stats, f, indent=4)
         
     print(f"\nResults successfully saved to: {full_save_path}")
 
